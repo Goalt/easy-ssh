@@ -15,7 +15,7 @@ Specifically designed for exposing local SSH services (`port 22`), `easy-ssh` ch
 ## ✨ Features
 
 - **Modern TUI Experience:** Powered by Bubble Tea and Lip Gloss for smooth animations, status indicators, and gorgeous layouts.
-- **Surgical Port Checking:** Automatically verifies if a service is actively listening on the specified port. If not, it displays a warnings and continues.
+- **Surgical Port Checking:** Automatically verifies if a service is actively listening on the specified port. If not, it displays a warning and continues.
 - **Zero-Dependency Bootstrapping:** Automatically detects and downloads the correct official `cloudflared` binary for your OS/Arch directly to `~/.easy-ssh/bin/` if not found in your `PATH`.
 - **Pre-packaged Install Script:** Single-command installer script matching modern standards.
 - **Multi-platform Docker Images:** Ready-to-use Docker images supporting both `amd64` (x86) and `arm64` (aarch64) platforms, hosted on GitHub Container Registry (GHCR).
