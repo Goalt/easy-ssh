@@ -10,8 +10,7 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"golang.go",
-				"vscjava.vscode-java-pack"
+				"golang.go"
 			]
 		}
 	},
