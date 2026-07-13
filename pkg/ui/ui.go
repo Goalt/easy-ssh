@@ -208,16 +208,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tunnelUpdateMsg:
 		if msg.Done {
-			if msg.Err != nil && !strings.Contains(msg.Err.Error(), "signal: interrupt") && !strings.Contains(msg.Err.Error(), "exit status 0") {
+			// Check if the exit was due to our own context cancellation
+			if m.ctx.Err() != nil {
+				// Clean exit on interrupt/cancellation
+				return m, tea.Quit
+			}
+
+			if msg.Err != nil {
 				m.err = msg.Err
 				m.status = StatusError
 			} else if m.status != StatusTunnelRunning {
 				// Tunnel exited before we found the URL
-				m.err = fmt.Errorf("tunnel closed unexpectedly: %v", msg.Err)
+				m.err = fmt.Errorf("tunnel closed unexpectedly")
 				m.status = StatusError
 			} else {
-				// Clean exit on interrupt
-				m.cancel()
+				// Clean exit without error
 				return m, tea.Quit
 			}
 		} else {
