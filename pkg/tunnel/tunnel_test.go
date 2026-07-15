@@ -67,7 +67,7 @@ func TestCheckPort(t *testing.T) {
 	}
 
 	// Close it
-	listener.Close()
+	_ = listener.Close()
 
 	// Now it's closed, so CheckPort should return false
 	if CheckPort(port) {

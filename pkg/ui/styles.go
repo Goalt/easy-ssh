@@ -1,58 +1,59 @@
+// Package ui provides the terminal user interface for easy-ssh using Bubble Tea.
 package ui
 
 import "github.com/charmbracelet/lipgloss"
 
 var (
 	// Colors
-	PrimaryColor = lipgloss.Color("#bd93f9")   // Purple
-	SecondaryColor = lipgloss.Color("#8be9fd") // Cyan
-	AccentColor  = lipgloss.Color("#ff79c6")   // Pink
-	GreenColor   = lipgloss.Color("#50fa7b")   // Green
-	YellowColor  = lipgloss.Color("#f1fa8c")   // Yellow
-	GrayColor    = lipgloss.Color("#6272a4")   // Comment/Gray
-	WhiteColor   = lipgloss.Color("#f8f8f2")   // White
+	primaryColor   = lipgloss.Color("#bd93f9")   // Purple
+	secondaryColor = lipgloss.Color("#8be9fd") // Cyan
+	accentColor    = lipgloss.Color("#ff79c6")   // Pink
+	greenColor     = lipgloss.Color("#50fa7b")   // Green
+	yellowColor    = lipgloss.Color("#f1fa8c")   // Yellow
+	grayColor      = lipgloss.Color("#6272a4")   // Comment/Gray
+	whiteColor     = lipgloss.Color("#f8f8f2")   // White
 
 	// Styles
-	TitleStyle = lipgloss.NewStyle().
-			Foreground(WhiteColor).
-			Background(PrimaryColor).
+	titleStyle = lipgloss.NewStyle().
+			Foreground(whiteColor).
+			Background(primaryColor).
 			Padding(0, 1).
 			Bold(true)
 
-	SubtitleStyle = lipgloss.NewStyle().
-			Foreground(SecondaryColor).
+	subtitleStyle = lipgloss.NewStyle().
+			Foreground(secondaryColor).
 			Italic(true)
 
-	WarningBoxStyle = lipgloss.NewStyle().
+	warningBoxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(YellowColor).
+			BorderForeground(yellowColor).
 			Padding(1, 2).
-			Foreground(YellowColor).
+			Foreground(yellowColor).
 			Width(60)
 
-	SuccessBoxStyle = lipgloss.NewStyle().
+	successBoxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(GreenColor).
+			BorderForeground(greenColor).
 			Padding(1, 2).
-			Foreground(WhiteColor).
+			Foreground(whiteColor).
 			Width(70)
 
-	CommandStyle = lipgloss.NewStyle().
-			Foreground(AccentColor).
+	commandStyle = lipgloss.NewStyle().
+			Foreground(accentColor).
 			Bold(true)
 
-	LabelStyle = lipgloss.NewStyle().
-			Foreground(SecondaryColor).
+	labelStyle = lipgloss.NewStyle().
+			Foreground(secondaryColor).
 			Bold(true)
 
-	StatusStyle = lipgloss.NewStyle().
-			Foreground(GrayColor)
+	statusStyle = lipgloss.NewStyle().
+			Foreground(grayColor)
 
-	TickStyle = lipgloss.NewStyle().
-			Foreground(GreenColor).
+	tickStyle = lipgloss.NewStyle().
+			Foreground(greenColor).
 			Bold(true)
 
-	CrossStyle = lipgloss.NewStyle().
-			Foreground(AccentColor).
+	crossStyle = lipgloss.NewStyle().
+			Foreground(accentColor).
 			Bold(true)
 )

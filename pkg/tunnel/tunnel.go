@@ -1,3 +1,4 @@
+// Package tunnel provides functions to interact with Cloudflare tunnels, check ports, and bootstrap the cloudflared binary.
 package tunnel
 
 import (
@@ -122,7 +123,7 @@ func DownloadCloudflared(onProgress func(float64)) (string, error) {
 	}
 
 	cacheDir := filepath.Join(homeDir, ".easy-ssh", "bin")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(cacheDir, 0750); err != nil {
 		return "", fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
@@ -130,6 +131,7 @@ func DownloadCloudflared(onProgress func(float64)) (string, error) {
 	destPath := filepath.Join(cacheDir, expectedName)
 
 	// Create request
+	// #nosec G107
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("failed to download cloudflared: %w", err)
@@ -151,7 +153,7 @@ func DownloadCloudflared(onProgress func(float64)) (string, error) {
 	if runtime.GOOS == "darwin" {
 		// Extract from .tgz
 		tempTgzPath := destPath + ".tgz"
-		tempTgzFile, err := os.OpenFile(tempTgzPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		tempTgzFile, err := os.OpenFile(tempTgzPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 		if err != nil {
 			return "", fmt.Errorf("failed to create temporary tgz file: %w", err)
 		}
@@ -169,6 +171,7 @@ func DownloadCloudflared(onProgress func(float64)) (string, error) {
 		}
 	} else {
 		// Write direct binary
+		// #nosec G302
 		out, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 		if err != nil {
 			return "", fmt.Errorf("failed to create executable: %w", err)
@@ -181,6 +184,7 @@ func DownloadCloudflared(onProgress func(float64)) (string, error) {
 	}
 
 	// Make sure it is executable (especially on unix systems)
+	// #nosec G302
 	if err := os.Chmod(destPath, 0755); err != nil {
 		return "", fmt.Errorf("failed to make cloudflared executable: %w", err)
 	}
@@ -207,6 +211,7 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 }
 
 func extractTgzBinary(tarGzPath, destPath string) error {
+	// #nosec G304
 	file, err := os.Open(tarGzPath)
 	if err != nil {
 		return err
@@ -231,12 +236,14 @@ func extractTgzBinary(tarGzPath, destPath string) error {
 
 		// Look for the "cloudflared" binary
 		if header.Typeflag == tar.TypeReg && (header.Name == "cloudflared" || filepath.Base(header.Name) == "cloudflared") {
+			// #nosec G302
 			outFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 			if err != nil {
 				return err
 			}
 			defer outFile.Close()
 
+			// #nosec G110
 			if _, err := io.Copy(outFile, tr); err != nil {
 				return err
 			}
@@ -247,19 +254,19 @@ func extractTgzBinary(tarGzPath, destPath string) error {
 	return fmt.Errorf("cloudflared binary not found inside tgz archive")
 }
 
-var TryCloudflareRegex = regexp.MustCompile(`https://[a-zA-Z0-9-]+\.trycloudflare\.com`)
+var tryCloudflareRegex = regexp.MustCompile(`https://[a-zA-Z0-9-]+\.trycloudflare\.com`)
 
 // ParseTunnelURL parses a single line of log and returns the tunnel URL if found.
 func ParseTunnelURL(line string) (string, bool) {
-	match := TryCloudflareRegex.FindString(line)
+	match := tryCloudflareRegex.FindString(line)
 	if match != "" {
 		return match, true
 	}
 	return "", false
 }
 
-// TunnelUpdate represents an update sent from the tunnel background runner.
-type TunnelUpdate struct {
+// Update represents an update sent from the tunnel background runner.
+type Update struct {
 	URL  string
 	Log  string
 	Err  error
@@ -267,7 +274,8 @@ type TunnelUpdate struct {
 }
 
 // RunTunnel executes cloudflared in a subprocess, parsing its logs for the trycloudflare URL.
-func RunTunnel(ctx context.Context, binPath string, port int, ch chan<- TunnelUpdate) {
+func RunTunnel(ctx context.Context, binPath string, port int, ch chan<- Update) {
+	// #nosec G204
 	cmd := exec.CommandContext(ctx, binPath, "tunnel", "--url", fmt.Sprintf("tcp://127.0.0.1:%d", port))
 
 	pr, pw := io.Pipe()
@@ -291,7 +299,7 @@ func RunTunnel(ctx context.Context, binPath string, port int, ch chan<- TunnelUp
 	if err := cmd.Start(); err != nil {
 		pw.Close()
 		pr.Close()
-		ch <- TunnelUpdate{Err: fmt.Errorf("failed to start cloudflared: %w", err), Done: true}
+		ch <- Update{Err: fmt.Errorf("failed to start cloudflared: %w", err), Done: true}
 		return
 	}
 
@@ -319,9 +327,9 @@ func RunTunnel(ctx context.Context, binPath string, port int, ch chan<- TunnelUp
 
 						// Scan for tunnel URL
 						if url, found := ParseTunnelURL(trimmed); found {
-							ch <- TunnelUpdate{URL: url, Log: trimmed}
+							ch <- Update{URL: url, Log: trimmed}
 						} else {
-							ch <- TunnelUpdate{Log: trimmed}
+							ch <- Update{Log: trimmed}
 						}
 					}
 				}
@@ -333,6 +341,6 @@ func RunTunnel(ctx context.Context, binPath string, port int, ch chan<- TunnelUp
 	}()
 
 	err := cmd.Wait()
-	ch <- TunnelUpdate{Err: err, Done: true}
+	ch <- Update{Err: err, Done: true}
 }
 

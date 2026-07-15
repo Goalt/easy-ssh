@@ -13,15 +13,15 @@ import (
 	"github.com/Goalt/easy-ssh/pkg/tunnel"
 )
 
-type SessionStatus int
+type sessionStatus int
 
 const (
-	StatusCheckingPort SessionStatus = iota
-	StatusCheckingCloudflared
-	StatusDownloading
-	StatusStartingTunnel
-	StatusTunnelRunning
-	StatusError
+	statusCheckingPort sessionStatus = iota
+	statusCheckingCloudflared
+	statusDownloading
+	statusStartingTunnel
+	statusTunnelRunning
+	statusError
 )
 
 type progressUpdate struct {
@@ -40,11 +40,11 @@ type cloudflaredCheckMsg struct {
 	err  error
 }
 
-type tunnelUpdateMsg tunnel.TunnelUpdate
+type tunnelUpdateMsg tunnel.Update
 
 // Model represents the state of the easy-ssh TUI.
 type Model struct {
-	status             SessionStatus
+	status             sessionStatus
 	port               int
 	customPath         string
 	portWarning        bool
@@ -58,7 +58,7 @@ type Model struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
 	chDownloadProgress chan progressUpdate
-	chTunnelUpdate     chan tunnel.TunnelUpdate
+	chTunnelUpdate     chan tunnel.Update
 	width              int
 	height             int
 }
@@ -67,14 +67,14 @@ type Model struct {
 func NewModel(port int, customPath string) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(PrimaryColor)
+	s.Style = lipgloss.NewStyle().Foreground(primaryColor)
 
 	prog := progress.New(progress.WithDefaultGradient())
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return Model{
-		status:             StatusCheckingPort,
+		status:             statusCheckingPort,
 		port:               port,
 		customPath:         customPath,
 		spinner:            s,
@@ -82,7 +82,7 @@ func NewModel(port int, customPath string) Model {
 		ctx:                ctx,
 		cancel:             cancel,
 		chDownloadProgress: make(chan progressUpdate, 20),
-		chTunnelUpdate:     make(chan tunnel.TunnelUpdate, 200),
+		chTunnelUpdate:     make(chan tunnel.Update, 200),
 	}
 }
 
@@ -178,16 +178,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !msg.listening {
 			m.portWarning = true
 		}
-		m.status = StatusCheckingCloudflared
+		m.status = statusCheckingCloudflared
 		cmds = append(cmds, m.checkCloudflaredCmd())
 
 	case cloudflaredCheckMsg:
 		if msg.err != nil {
-			m.status = StatusDownloading
+			m.status = statusDownloading
 			cmds = append(cmds, m.downloadCloudflaredCmd())
 		} else {
 			m.cloudflaredPath = msg.path
-			m.status = StatusStartingTunnel
+			m.status = statusStartingTunnel
 			cmds = append(cmds, m.startTunnelCmd())
 		}
 
@@ -195,10 +195,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.done {
 			if msg.err != nil {
 				m.err = msg.err
-				m.status = StatusError
+				m.status = statusError
 			} else {
 				m.cloudflaredPath = msg.path
-				m.status = StatusStartingTunnel
+				m.status = statusStartingTunnel
 				cmds = append(cmds, m.startTunnelCmd())
 			}
 		} else {
@@ -216,11 +216,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if msg.Err != nil {
 				m.err = msg.Err
-				m.status = StatusError
-			} else if m.status != StatusTunnelRunning {
+				m.status = statusError
+			} else if m.status != statusTunnelRunning {
 				// Tunnel exited before we found the URL
 				m.err = fmt.Errorf("tunnel closed unexpectedly")
-				m.status = StatusError
+				m.status = statusError
 			} else {
 				// Clean exit without error
 				return m, tea.Quit
@@ -228,7 +228,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			if msg.URL != "" {
 				m.tunnelURL = msg.URL
-				m.status = StatusTunnelRunning
+				m.status = statusTunnelRunning
 			}
 			if msg.Log != "" {
 				m.logs = append(m.logs, msg.Log)
@@ -249,81 +249,81 @@ func (m Model) View() string {
 
 	// Header Banner
 	sb.WriteString("\n")
-	sb.WriteString(TitleStyle.Render(" EASY-SSH CLOUDFLARE TUNNEL ") + "\n")
-	sb.WriteString(SubtitleStyle.Render(" Securely share your local SSH or TCP services ") + "\n\n")
+	sb.WriteString(titleStyle.Render(" EASY-SSH CLOUDFLARE TUNNEL ") + "\n")
+	sb.WriteString(subtitleStyle.Render(" Securely share your local SSH or TCP services ") + "\n\n")
 
 	// Main body depending on status
 	switch m.status {
-	case StatusCheckingPort:
+	case statusCheckingPort:
 		sb.WriteString(fmt.Sprintf("%s Checking if a service is listening on TCP port %d...\n", m.spinner.View(), m.port))
 
-	case StatusCheckingCloudflared:
+	case statusCheckingCloudflared:
 		sb.WriteString(renderCheckedItem("Port checked successfully.", true))
 		if m.portWarning {
-			sb.WriteString(WarningBoxStyle.Render(fmt.Sprintf("⚠️  Warning: No active listener detected on port %d.\nGenerating tunnel anyway.", m.port)) + "\n\n")
+			sb.WriteString(warningBoxStyle.Render(fmt.Sprintf("⚠️  Warning: No active listener detected on port %d.\nGenerating tunnel anyway.", m.port)) + "\n\n")
 		} else {
-			sb.WriteString(TickStyle.Render("✔") + fmt.Sprintf(" Active listener detected on port %d.\n\n", m.port))
+			sb.WriteString(tickStyle.Render("✔") + fmt.Sprintf(" Active listener detected on port %d.\n\n", m.port))
 		}
 		sb.WriteString(fmt.Sprintf("%s Checking for cloudflared installation...\n", m.spinner.View()))
 
-	case StatusDownloading:
+	case statusDownloading:
 		sb.WriteString(renderCheckedItem(fmt.Sprintf("Port checked successfully (Port %d).", m.port), true))
 		if m.portWarning {
-			sb.WriteString(WarningBoxStyle.Render(fmt.Sprintf("⚠️  Warning: No active listener detected on port %d.\nGenerating tunnel anyway.", m.port)) + "\n\n")
+			sb.WriteString(warningBoxStyle.Render(fmt.Sprintf("⚠️  Warning: No active listener detected on port %d.\nGenerating tunnel anyway.", m.port)) + "\n\n")
 		}
 		sb.WriteString(renderCheckedItem("cloudflared not found in PATH.", false))
 		sb.WriteString("Downloading cloudflared from GitHub Releases...\n")
 		sb.WriteString(m.progressBar.ViewAs(m.downloadProgress) + fmt.Sprintf(" %.0f%%\n", m.downloadProgress*100))
 
-	case StatusStartingTunnel:
+	case statusStartingTunnel:
 		sb.WriteString(renderCheckedItem(fmt.Sprintf("Port checked successfully (Port %d).", m.port), true))
 		if m.portWarning {
-			sb.WriteString(WarningBoxStyle.Render(fmt.Sprintf("⚠️  Warning: No active listener detected on port %d.\nGenerating tunnel anyway.", m.port)) + "\n\n")
+			sb.WriteString(warningBoxStyle.Render(fmt.Sprintf("⚠️  Warning: No active listener detected on port %d.\nGenerating tunnel anyway.", m.port)) + "\n\n")
 		}
 		sb.WriteString(renderCheckedItem("cloudflared is ready.", true))
 		sb.WriteString(fmt.Sprintf("%s Contacting trycloudflare.com to establish tunnel...\n", m.spinner.View()))
 		if len(m.logs) > 0 {
-			sb.WriteString("\n" + StatusStyle.Render("Logs:") + "\n")
+			sb.WriteString("\n" + statusStyle.Render("Logs:") + "\n")
 			lastLogs := m.logs
 			if len(lastLogs) > 3 {
 				lastLogs = lastLogs[len(lastLogs)-3:]
 			}
 			for _, log := range lastLogs {
-				sb.WriteString(StatusStyle.Render("  "+log) + "\n")
+				sb.WriteString(statusStyle.Render("  "+log) + "\n")
 			}
 		}
 
-	case StatusTunnelRunning:
+	case statusTunnelRunning:
 		if m.portWarning {
-			sb.WriteString(WarningBoxStyle.Render(fmt.Sprintf("⚠️  Warning: No active listener detected on port %d.\nGenerating tunnel anyway.", m.port)) + "\n\n")
+			sb.WriteString(warningBoxStyle.Render(fmt.Sprintf("⚠️  Warning: No active listener detected on port %d.\nGenerating tunnel anyway.", m.port)) + "\n\n")
 		}
 
 		// Success Card
 		var content strings.Builder
-		content.WriteString(TickStyle.Render("✔ SUCCESS! Your Cloudflare Tunnel is established and active.") + "\n\n")
-		content.WriteString(LabelStyle.Render("Tunnel URL:") + " " + CommandStyle.Render(m.tunnelURL) + "\n\n")
+		content.WriteString(tickStyle.Render("✔ SUCCESS! Your Cloudflare Tunnel is established and active.") + "\n\n")
+		content.WriteString(labelStyle.Render("Tunnel URL:") + " " + commandStyle.Render(m.tunnelURL) + "\n\n")
 		content.WriteString("To connect via SSH from a remote client, use this command:\n")
-		content.WriteString(CommandStyle.Render(fmt.Sprintf("ssh -o \"ProxyCommand=cloudflared access tcp --hostname %%h --port %%p\" user@%s", strings.TrimPrefix(m.tunnelURL, "https://"))) + "\n\n")
-		content.WriteString(StatusStyle.Render("Note: The connecting client must also have the `cloudflared` binary installed."))
+		content.WriteString(commandStyle.Render(fmt.Sprintf("ssh -o \"ProxyCommand=cloudflared access tcp --hostname %%h --port %%p\" user@%s", strings.TrimPrefix(m.tunnelURL, "https://"))) + "\n\n")
+		content.WriteString(statusStyle.Render("Note: The connecting client must also have the `cloudflared` binary installed."))
 
-		sb.WriteString(SuccessBoxStyle.Render(content.String()) + "\n\n")
-		sb.WriteString(m.spinner.View() + " " + StatusStyle.Render("Tunneling traffic... Press ") + CommandStyle.Render("Ctrl+C") + StatusStyle.Render(" or ") + CommandStyle.Render("Q") + StatusStyle.Render(" to terminate.") + "\n")
+		sb.WriteString(successBoxStyle.Render(content.String()) + "\n\n")
+		sb.WriteString(m.spinner.View() + " " + statusStyle.Render("Tunneling traffic... Press ") + commandStyle.Render("Ctrl+C") + statusStyle.Render(" or ") + commandStyle.Render("Q") + statusStyle.Render(" to terminate.") + "\n")
 
-	case StatusError:
-		sb.WriteString(CrossStyle.Render("✖ Error occurred:") + "\n")
-		sb.WriteString(WarningBoxStyle.Render(m.err.Error()) + "\n\n")
+	case statusError:
+		sb.WriteString(crossStyle.Render("✖ Error occurred:") + "\n")
+		sb.WriteString(warningBoxStyle.Render(m.err.Error()) + "\n\n")
 		if len(m.logs) > 0 {
-			sb.WriteString(StatusStyle.Render("Last logs:") + "\n")
+			sb.WriteString(statusStyle.Render("Last logs:") + "\n")
 			lastLogs := m.logs
 			if len(lastLogs) > 5 {
 				lastLogs = lastLogs[len(lastLogs)-5:]
 			}
 			for _, log := range lastLogs {
-				sb.WriteString(StatusStyle.Render("  "+log) + "\n")
+				sb.WriteString(statusStyle.Render("  "+log) + "\n")
 			}
 			sb.WriteString("\n")
 		}
-		sb.WriteString(StatusStyle.Render("Press Ctrl+C or Q to exit.") + "\n")
+		sb.WriteString(statusStyle.Render("Press Ctrl+C or Q to exit.") + "\n")
 	}
 
 	return sb.String()
@@ -331,7 +331,7 @@ func (m Model) View() string {
 
 func renderCheckedItem(text string, success bool) string {
 	if success {
-		return fmt.Sprintf(" %s %s\n", TickStyle.Render("✔"), text)
+		return fmt.Sprintf(" %s %s\n", tickStyle.Render("✔"), text)
 	}
-	return fmt.Sprintf(" %s %s\n", CrossStyle.Render("✖"), text)
+	return fmt.Sprintf(" %s %s\n", crossStyle.Render("✖"), text)
 }

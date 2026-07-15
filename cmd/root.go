@@ -1,3 +1,4 @@
+// Package cmd defines the command line interface commands and flags.
 package cmd
 
 import (
@@ -20,7 +21,7 @@ var rootCmd = &cobra.Command{
 	Long: `easy-ssh is a CLI tool that simplifies creating Cloudflare tunnels for TCP services
 like SSH. It checks if a service is listening on the target port, automatically downloads
 and runs cloudflared if needed, and presents a beautiful, modern terminal interface.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		// Create and run the Bubble Tea program
 		m := ui.NewModel(port, customCFPath)
 		p := tea.NewProgram(m)
@@ -31,6 +32,7 @@ and runs cloudflared if needed, and presents a beautiful, modern terminal interf
 	},
 }
 
+// Execute runs the root CLI command of easy-ssh.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

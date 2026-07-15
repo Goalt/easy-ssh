@@ -38,6 +38,31 @@ Once installed, simply run:
 easy-ssh --port 22
 ```
 
+### Go Install (Go 1.24+)
+
+You can also install the latest stable version of `easy-ssh` directly using Go:
+
+```bash
+go install github.com/Goalt/easy-ssh@latest
+```
+
+*Note: Make sure your `GOBIN` directory (usually `~/go/bin`) is included in your system's `PATH`.*
+
+### Manual Download & Install
+
+You can also manually download the pre-compiled binary matching your platform directly from the [GitHub Releases](https://github.com/Goalt/easy-ssh/releases) page. For example, to download and install for Linux AMD64:
+
+```bash
+# Download the latest binary for Linux AMD64
+curl -sSfL -o easy-ssh https://github.com/Goalt/easy-ssh/releases/latest/download/easy-ssh-linux-amd64
+
+# Make the binary executable
+chmod +x easy-ssh
+
+# Move the binary to a directory in your PATH (e.g., /usr/local/bin)
+sudo mv easy-ssh /usr/local/bin/
+```
+
 ### Docker
 
 Run `easy-ssh` directly as a lightweight container utilizing your host's network:
