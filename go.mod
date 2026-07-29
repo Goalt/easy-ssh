@@ -1,6 +1,6 @@
 module github.com/Goalt/easy-ssh
 
-go 1.24.13
+go 1.24.5
 
 require (
 	github.com/charmbracelet/bubbles v1.0.0
