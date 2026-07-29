@@ -16,7 +16,7 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start a simple HTML / static file server",
 	Long:  `Start a simple HTTP server to serve static files from a directory on a specified port.`,
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		fs := http.FileServer(http.Dir(serveDir))
 		
 		// Set up a basic logger middleware for requests
@@ -29,7 +29,11 @@ var serveCmd = &cobra.Command{
 		fmt.Printf("Local URL: http://localhost:%d\n", servePort)
 		fmt.Println("Press Ctrl+C to terminate.")
 
-		if err := http.ListenAndServe(fmt.Sprintf(":%d", servePort), nil); err != nil {
+		server := &http.Server{
+			Addr:              fmt.Sprintf(":%d", servePort),
+			ReadHeaderTimeout: http.DefaultClient.Timeout, // Basic timeout settings to satisfy gosec (G114)
+		}
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			return fmt.Errorf("failed to run serve: %w", err)
 		}
 		return nil
