@@ -25,7 +25,9 @@ func CheckPort(port int) bool {
 	if err != nil {
 		return false
 	}
-	conn.Close()
+	if err := conn.Close(); err != nil {
+		return false
+	}
 	return true
 }
 
@@ -136,7 +138,9 @@ func DownloadCloudflared(onProgress func(float64)) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to download cloudflared: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("failed to download cloudflared, HTTP status: %s", resp.Status)
@@ -145,25 +149,30 @@ func DownloadCloudflared(onProgress func(float64)) (string, error) {
 	// Support progress reporting
 	totalSize := resp.ContentLength
 	reader := &progressReader{
-		Reader:    resp.Body,
-		Total:     totalSize,
+		Reader:     resp.Body,
+		Total:      totalSize,
 		OnProgress: onProgress,
 	}
 
 	if runtime.GOOS == "darwin" {
 		// Extract from .tgz
 		tempTgzPath := destPath + ".tgz"
+		// #nosec G304 -- tempTgzPath is derived from the application cache directory.
 		tempTgzFile, err := os.OpenFile(tempTgzPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 		if err != nil {
 			return "", fmt.Errorf("failed to create temporary tgz file: %w", err)
 		}
-		defer os.Remove(tempTgzPath)
+		defer func() {
+			_ = os.Remove(tempTgzPath)
+		}()
 
 		if _, err := io.Copy(tempTgzFile, reader); err != nil {
-			tempTgzFile.Close()
+			_ = tempTgzFile.Close()
 			return "", fmt.Errorf("failed to write temporary tgz file: %w", err)
 		}
-		tempTgzFile.Close()
+		if err := tempTgzFile.Close(); err != nil {
+			return "", fmt.Errorf("failed to close temporary tgz file: %w", err)
+		}
 
 		// Extract the binary from the tgz
 		if err := extractTgzBinary(tempTgzPath, destPath); err != nil {
@@ -171,15 +180,18 @@ func DownloadCloudflared(onProgress func(float64)) (string, error) {
 		}
 	} else {
 		// Write direct binary
-		// #nosec G302
+		// #nosec G302,G304 -- destPath is derived from the application cache directory.
 		out, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 		if err != nil {
 			return "", fmt.Errorf("failed to create executable: %w", err)
 		}
-		defer out.Close()
 
 		if _, err := io.Copy(out, reader); err != nil {
+			_ = out.Close()
 			return "", fmt.Errorf("failed to save executable: %w", err)
+		}
+		if err := out.Close(); err != nil {
+			return "", fmt.Errorf("failed to close executable: %w", err)
 		}
 	}
 
@@ -194,8 +206,8 @@ func DownloadCloudflared(onProgress func(float64)) (string, error) {
 
 type progressReader struct {
 	io.Reader
-	Total     int64
-	ReadBytes int64
+	Total      int64
+	ReadBytes  int64
 	OnProgress func(float64)
 }
 
@@ -216,13 +228,17 @@ func extractTgzBinary(tarGzPath, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	gzr, err := gzip.NewReader(file)
 	if err != nil {
 		return err
 	}
-	defer gzr.Close()
+	defer func() {
+		_ = gzr.Close()
+	}()
 
 	tr := tar.NewReader(gzr)
 	for {
@@ -236,15 +252,18 @@ func extractTgzBinary(tarGzPath, destPath string) error {
 
 		// Look for the "cloudflared" binary
 		if header.Typeflag == tar.TypeReg && (header.Name == "cloudflared" || filepath.Base(header.Name) == "cloudflared") {
-			// #nosec G302
+			// #nosec G302,G304 -- destPath is derived from the application cache directory.
 			outFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 			if err != nil {
 				return err
 			}
-			defer outFile.Close()
 
 			// #nosec G110
 			if _, err := io.Copy(outFile, tr); err != nil {
+				_ = outFile.Close()
+				return err
+			}
+			if err := outFile.Close(); err != nil {
 				return err
 			}
 			return nil
@@ -297,16 +316,20 @@ func RunTunnel(ctx context.Context, binPath string, port int, ch chan<- Update) 
 	}()
 
 	if err := cmd.Start(); err != nil {
-		pw.Close()
-		pr.Close()
+		_ = pw.Close()
+		_ = pr.Close()
 		ch <- Update{Err: fmt.Errorf("failed to start cloudflared: %w", err), Done: true}
 		return
 	}
 
 	// Scan stdout/stderr merged output line by line
 	go func() {
-		defer pw.Close()
-		defer pr.Close()
+		defer func() {
+			_ = pw.Close()
+		}()
+		defer func() {
+			_ = pr.Close()
+		}()
 
 		var r io.Reader = pr
 		buf := make([]byte, 4096)
@@ -343,4 +366,3 @@ func RunTunnel(ctx context.Context, binPath string, port int, ch chan<- Update) 
 	err := cmd.Wait()
 	ch <- Update{Err: err, Done: true}
 }
-
