@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Goalt/easy-ssh/pkg/tunnel"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/Goalt/easy-ssh/pkg/tunnel"
 )
 
 type sessionStatus int
@@ -304,7 +304,10 @@ func (m Model) View() string {
 		content.WriteString(labelStyle.Render("Tunnel URL:") + " " + commandStyle.Render(m.tunnelURL) + "\n\n")
 		content.WriteString("To connect via SSH from a remote client, use this command:\n")
 		content.WriteString(commandStyle.Render(fmt.Sprintf("ssh -o \"ProxyCommand=cloudflared access tcp --hostname %%h --port %%p\" user@%s", strings.TrimPrefix(m.tunnelURL, "https://"))) + "\n\n")
-		content.WriteString(statusStyle.Render("Note: The connecting client must also have the `cloudflared` binary installed."))
+		content.WriteString(statusStyle.Render("Install cloudflared on the connecting client:\n"))
+		content.WriteString(statusStyle.Render("macOS: ") + commandStyle.Render("brew install cloudflared") + "\n")
+		content.WriteString(statusStyle.Render("Windows: ") + commandStyle.Render("winget install --id Cloudflare.cloudflared") + "\n")
+		content.WriteString(statusStyle.Render("Linux (amd64): ") + commandStyle.Render("curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared && sudo install -m 755 cloudflared /usr/local/bin/cloudflared && rm cloudflared"))
 
 		sb.WriteString(successBoxStyle.Render(content.String()) + "\n\n")
 		sb.WriteString(m.spinner.View() + " " + statusStyle.Render("Tunneling traffic... Press ") + commandStyle.Render("Ctrl+C") + statusStyle.Render(" or ") + commandStyle.Render("Q") + statusStyle.Render(" to terminate.") + "\n")

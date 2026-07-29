@@ -113,6 +113,22 @@ ssh -o "ProxyCommand=cloudflared access tcp --hostname %h --port %p" user@<your-
 
 *Note: The connecting client machine must have `cloudflared` installed locally to support the SSH proxy connection.*
 
+Install it with one command:
+
+```bash
+# macOS
+brew install cloudflared
+
+# Linux (amd64)
+sudo curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared && sudo chmod +x /usr/local/bin/cloudflared
+```
+
+Verify the installation:
+
+```bash
+cloudflared --version
+```
+
 ---
 
 ## 🛠️ Development
