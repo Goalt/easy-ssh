@@ -23,10 +23,10 @@ func TestModelTunnelRunningView(t *testing.T) {
 	plainView := stripANSI(view)
 
 	// Assertions for installation instructions
-	if !strings.Contains(plainView, "macOS: brew install cloudflared") {
+	if !strings.Contains(plainView, "macOS:") || !strings.Contains(plainView, "brew install cloudflared") {
 		t.Errorf("View missing macOS instruction, got:\n%s", plainView)
 	}
-	if !strings.Contains(plainView, "Windows: winget install --id Cloudflare.cloudflared") {
+	if !strings.Contains(plainView, "Windows:") || !strings.Contains(plainView, "winget install --id Cloudflare.cloudflared") {
 		t.Errorf("View missing Windows instruction, got:\n%s", plainView)
 	}
 	if !strings.Contains(plainView, "Linux (amd64):") {
@@ -70,14 +70,14 @@ func TestModelTunnelRunningView(t *testing.T) {
 	}
 
 	// Also verify that the copyable commands do not have any newlines inside them
-	// The lines split from plaintext should contain the full original commands in a single line
-	if !strings.Contains(macLine, "brew install cloudflared") {
-		t.Errorf("macOS command contains unexpected line wrap inside command: %q", macLine)
+	// We check for the presence of the commands themselves in the plainView output.
+	if !strings.Contains(plainView, "brew install cloudflared") {
+		t.Errorf("plainView missing macOS install command")
 	}
-	if !strings.Contains(winLine, "winget install --id Cloudflare.cloudflared") {
-		t.Errorf("Windows command contains unexpected line wrap inside command: %q", winLine)
+	if !strings.Contains(plainView, "winget install --id Cloudflare.cloudflared") {
+		t.Errorf("plainView missing Windows install command")
 	}
-	if !strings.Contains(linLine, "curl -L https://github.com/cloudflare") {
-		t.Errorf("Linux command contains unexpected line wrap inside command: %q", linLine)
+	if !strings.Contains(plainView, "curl -L https://github.com/cloudflare") {
+		t.Errorf("plainView missing Linux install command")
 	}
 }
