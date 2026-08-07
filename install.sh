@@ -106,14 +106,11 @@ if [ -z "$LATEST_TAG" ]; then
     LATEST_TAG=$(curl_fetch "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -n1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -d '[:space:]')
 fi
 
-if [ -z "$LATEST_TAG" ]; then
-    # Fallback to main branch binary or manual build if no releases exist yet
-    warn "Could not fetch latest release. Repository might not have a release cut yet."
-    LATEST_TAG="latest"
+if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "latest" ]; then
+    DOWNLOAD_URL="https://github.com/Goalt/easy-ssh/releases/latest/download/easy-ssh-${OS}-${ARCH}"
+else
+    DOWNLOAD_URL="https://github.com/Goalt/easy-ssh/releases/download/${LATEST_TAG}/easy-ssh-${OS}-${ARCH}"
 fi
-
-# Build download URL
-DOWNLOAD_URL="https://github.com/Goalt/easy-ssh/releases/download/${LATEST_TAG}/easy-ssh-${OS}-${ARCH}"
 
 # Determine installation directory
 INSTALL_DIR="/usr/local/bin"
