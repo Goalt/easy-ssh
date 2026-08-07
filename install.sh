@@ -73,9 +73,32 @@ esac
 REPO="Goalt/easy-ssh"
 BINARY_NAME="easy-ssh"
 
+# Prepare curl auth header if GITHUB_TOKEN or GH_TOKEN is set
+CURL_AUTH_HEADER=""
+TOKEN="${GITHUB_TOKEN:-${GH_TOKEN}}"
+if [ -n "$TOKEN" ]; then
+    CURL_AUTH_HEADER="Authorization: Bearer $TOKEN"
+fi
+
+curl_fetch() {
+    if [ -n "$CURL_AUTH_HEADER" ]; then
+        curl -sSf -H "$CURL_AUTH_HEADER" -H "User-Agent: easy-ssh-installer" "$@"
+    else
+        curl -sSf -H "User-Agent: easy-ssh-installer" "$@"
+    fi
+}
+
+curl_download() {
+    if [ -n "$CURL_AUTH_HEADER" ]; then
+        curl -sSfL -H "$CURL_AUTH_HEADER" -H "User-Agent: easy-ssh-installer" "$@"
+    else
+        curl -sSfL -H "User-Agent: easy-ssh-installer" "$@"
+    fi
+}
+
 # Fetch latest release tag from GitHub API
 info "Fetching latest release version..."
-LATEST_TAG=$(curl -sSf "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+LATEST_TAG=$(curl_fetch "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
 if [ -z "$LATEST_TAG" ]; then
     # Fallback to main branch binary or manual build if no releases exist yet
@@ -83,8 +106,7 @@ if [ -z "$LATEST_TAG" ]; then
     LATEST_TAG="latest"
 fi
 
-# Build download URL (assuming release naming convention: easy-ssh-linux-amd64, easy-ssh-darwin-arm64, etc.)
-# If no releases exist, we advise building from source
+# Build download URL
 DOWNLOAD_URL="https://github.com/Goalt/easy-ssh/releases/download/${LATEST_TAG}/easy-ssh-${OS}-${ARCH}"
 
 # Determine installation directory
@@ -114,10 +136,11 @@ TEMP_BIN="/tmp/easy-ssh-download"
 info "Downloading ${BINARY_NAME} (${OS}/${ARCH}) from GitHub..."
 
 # Perform download
-if curl -sSfL -o "$TEMP_BIN" "$DOWNLOAD_URL"; then
+if curl_download -o "$TEMP_BIN" "$DOWNLOAD_URL"; then
     mv "$TEMP_BIN" "${INSTALL_DIR}/${BINARY_NAME}"
     chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     success "Successfully installed ${BINARY_NAME} to ${INSTALL_DIR}/${BINARY_NAME}!"
 else
     error "Failed to download binary. Please make sure a release exists or compile from source."
 fi
+
