@@ -98,7 +98,13 @@ curl_download() {
 
 # Fetch latest release tag from GitHub API
 info "Fetching latest release version..."
-LATEST_TAG=$(curl_fetch "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -n1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -d '[:space:]')
+if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    LATEST_TAG=$(gh release view --repo "$REPO" --json tagName -q .tagName 2>/dev/null || true)
+fi
+
+if [ -z "$LATEST_TAG" ]; then
+    LATEST_TAG=$(curl_fetch "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -n1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -d '[:space:]')
+fi
 
 if [ -z "$LATEST_TAG" ]; then
     # Fallback to main branch binary or manual build if no releases exist yet
@@ -136,7 +142,21 @@ TEMP_BIN="/tmp/easy-ssh-download"
 info "Downloading ${BINARY_NAME} (${OS}/${ARCH}) from GitHub..."
 
 # Perform download
-if curl_download -o "$TEMP_BIN" "$DOWNLOAD_URL"; then
+DOWNLOAD_SUCCESS=0
+
+if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    if gh release download "$LATEST_TAG" --repo "$REPO" --pattern "easy-ssh-${OS}-${ARCH}" --output "$TEMP_BIN" --clobber >/dev/null 2>&1; then
+        DOWNLOAD_SUCCESS=1
+    fi
+fi
+
+if [ "$DOWNLOAD_SUCCESS" -eq 0 ]; then
+    if curl_download -o "$TEMP_BIN" "$DOWNLOAD_URL"; then
+        DOWNLOAD_SUCCESS=1
+    fi
+fi
+
+if [ "$DOWNLOAD_SUCCESS" -eq 1 ]; then
     mv "$TEMP_BIN" "${INSTALL_DIR}/${BINARY_NAME}"
     chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     success "Successfully installed ${BINARY_NAME} to ${INSTALL_DIR}/${BINARY_NAME}!"
