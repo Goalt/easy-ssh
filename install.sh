@@ -73,51 +73,23 @@ esac
 REPO="Goalt/easy-ssh"
 BINARY_NAME="easy-ssh"
 
-# Prepare curl auth header if GITHUB_TOKEN or GH_TOKEN is set
-CURL_AUTH_HEADER=""
-TOKEN="${GITHUB_TOKEN:-${GH_TOKEN}}"
-if [ -n "$TOKEN" ]; then
-    CURL_AUTH_HEADER="Authorization: Bearer $TOKEN"
-fi
-
-curl_fetch() {
-    if [ -n "$CURL_AUTH_HEADER" ]; then
-        curl -sSf -H "$CURL_AUTH_HEADER" -H "User-Agent: easy-ssh-installer" "$@"
-    else
-        curl -sSf -H "User-Agent: easy-ssh-installer" "$@"
-    fi
-}
-
-curl_download() {
-    if [ -n "$CURL_AUTH_HEADER" ]; then
-        curl -sSfL -H "$CURL_AUTH_HEADER" -H "User-Agent: easy-ssh-installer" "$@"
-    else
-        curl -sSfL -H "User-Agent: easy-ssh-installer" "$@"
-    fi
-}
-
-# Determine target version/tag or default to direct latest release download
 TAG="${TAG:-${VERSION}}"
 
 if [ -n "$TAG" ]; then
-    DOWNLOAD_URL="https://github.com/Goalt/easy-ssh/releases/download/${TAG}/easy-ssh-${OS}-${ARCH}"
+    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/easy-ssh-${OS}-${ARCH}"
 else
-    DOWNLOAD_URL="https://github.com/Goalt/easy-ssh/releases/latest/download/easy-ssh-${OS}-${ARCH}"
+    DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/easy-ssh-${OS}-${ARCH}"
 fi
 
 # Determine installation directory
 INSTALL_DIR="/usr/local/bin"
 if [ ! -w "$INSTALL_DIR" ]; then
-    # If /usr/local/bin is not writeable, check if we can sudo or use user local bin
     if [ "$(id -u)" -eq 0 ]; then
-        # Running as root, /usr/local/bin should be writeable, but just in case
         error "Cannot write to $INSTALL_DIR even as root"
     else
-        # Not root, try to install to ~/.local/bin
         INSTALL_DIR="${HOME}/.local/bin"
         mkdir -p "$INSTALL_DIR"
         warn "Cannot write to /usr/local/bin. Installing to ${INSTALL_DIR} instead."
-        # Check if ~/.local/bin is in PATH
         case ":$PATH:" in
             *:"$INSTALL_DIR":*)
                 ;;
@@ -131,26 +103,11 @@ fi
 TEMP_BIN="/tmp/easy-ssh-download"
 info "Downloading ${BINARY_NAME} (${OS}/${ARCH}) from GitHub..."
 
-# Perform download
-DOWNLOAD_SUCCESS=0
-
-if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-    if gh release download "$LATEST_TAG" --repo "$REPO" --pattern "easy-ssh-${OS}-${ARCH}" --output "$TEMP_BIN" --clobber >/dev/null 2>&1; then
-        DOWNLOAD_SUCCESS=1
-    fi
-fi
-
-if [ "$DOWNLOAD_SUCCESS" -eq 0 ]; then
-    if curl_download -o "$TEMP_BIN" "$DOWNLOAD_URL"; then
-        DOWNLOAD_SUCCESS=1
-    fi
-fi
-
-if [ "$DOWNLOAD_SUCCESS" -eq 1 ]; then
+# Perform download with curl
+if curl -sSfL -H "User-Agent: easy-ssh-installer" -o "$TEMP_BIN" "$DOWNLOAD_URL"; then
     mv "$TEMP_BIN" "${INSTALL_DIR}/${BINARY_NAME}"
     chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     success "Successfully installed ${BINARY_NAME} to ${INSTALL_DIR}/${BINARY_NAME}!"
 else
-    error "Failed to download binary. Please make sure a release exists or compile from source."
+    error "Failed to download binary from ${DOWNLOAD_URL}. Please make sure a release exists or compile from source."
 fi
-
