@@ -98,7 +98,7 @@ curl_download() {
 
 # Fetch latest release tag from GitHub API
 info "Fetching latest release version..."
-LATEST_TAG=$(curl_fetch "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+LATEST_TAG=$(curl_fetch "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -n1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -d '[:space:]')
 
 if [ -z "$LATEST_TAG" ]; then
     # Fallback to main branch binary or manual build if no releases exist yet
