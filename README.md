@@ -108,7 +108,7 @@ easy-ssh --help
 When the tunnel is successfully established, `easy-ssh` will display a success card with your temporary `trycloudflare.com` address and the exact SSH client connection command:
 
 ```bash
-ssh -o "ProxyCommand=cloudflared access tcp --hostname %h --port %p" user@<your-tunnel-subdomain>.trycloudflare.com
+ssh -o "ProxyCommand=cloudflared access tcp --hostname %h" user@<your-tunnel-subdomain>.trycloudflare.com
 ```
 
 *Note: The connecting client machine must have `cloudflared` installed locally to support the SSH proxy connection.*
