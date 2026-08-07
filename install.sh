@@ -38,19 +38,19 @@ error() {
 
 # Detect OS and architecture
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
-ARCH="$(uname -m)"
+ARCH="$(uname -m | tr '[:upper:]' '[:lower:]')"
 
 case "$ARCH" in
-    x86_64|amd64)
+    x86_64|amd64|x86-64|x64)
         ARCH="amd64"
         ;;
-    aarch64|arm64)
+    aarch64|arm64|armv8*)
         ARCH="arm64"
         ;;
-    i386|i686)
+    i386|i486|i586|i686)
         ARCH="386"
         ;;
-    armv7l|armv6l)
+    armv7*|armv6*|arm)
         ARCH="arm"
         ;;
     *)
@@ -59,10 +59,10 @@ case "$ARCH" in
 esac
 
 case "$OS" in
-    linux)
+    linux*)
         OS="linux"
         ;;
-    darwin)
+    darwin*)
         OS="darwin"
         ;;
     *)
@@ -96,20 +96,13 @@ curl_download() {
     fi
 }
 
-# Fetch latest release tag from GitHub API
-info "Fetching latest release version..."
-if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-    LATEST_TAG=$(gh release view --repo "$REPO" --json tagName -q .tagName 2>/dev/null || true)
-fi
+# Determine target version/tag or default to direct latest release download
+TAG="${TAG:-${VERSION}}"
 
-if [ -z "$LATEST_TAG" ]; then
-    LATEST_TAG=$(curl_fetch "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -n1 | sed -E 's/.*"([^"]+)".*/\1/' | tr -d '[:space:]')
-fi
-
-if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "latest" ]; then
-    DOWNLOAD_URL="https://github.com/Goalt/easy-ssh/releases/latest/download/easy-ssh-${OS}-${ARCH}"
+if [ -n "$TAG" ]; then
+    DOWNLOAD_URL="https://github.com/Goalt/easy-ssh/releases/download/${TAG}/easy-ssh-${OS}-${ARCH}"
 else
-    DOWNLOAD_URL="https://github.com/Goalt/easy-ssh/releases/download/${LATEST_TAG}/easy-ssh-${OS}-${ARCH}"
+    DOWNLOAD_URL="https://github.com/Goalt/easy-ssh/releases/latest/download/easy-ssh-${OS}-${ARCH}"
 fi
 
 # Determine installation directory
