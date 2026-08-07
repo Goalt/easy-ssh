@@ -302,8 +302,14 @@ func (m Model) View() string {
 		var content strings.Builder
 		content.WriteString(tickStyle.Render("✔ SUCCESS! Your Cloudflare Tunnel is established and active.") + "\n\n")
 		content.WriteString(labelStyle.Render("Tunnel URL:") + " " + commandStyle.Render(m.tunnelURL) + "\n\n")
-		content.WriteString("To connect via SSH from a remote client, use this command:\n")
-		content.WriteString(commandStyle.Render(fmt.Sprintf("ssh -o \"ProxyCommand=cloudflared access tcp --hostname %%h\" user@%s", strings.TrimPrefix(m.tunnelURL, "https://"))) + "\n\n")
+		if m.port == 22 {
+			content.WriteString("To connect via SSH from a remote client, use this command:\n")
+			content.WriteString(commandStyle.Render(fmt.Sprintf("ssh -o \"ProxyCommand=cloudflared access tcp --hostname %%h\" user@%s", strings.TrimPrefix(m.tunnelURL, "https://"))) + "\n\n")
+			content.WriteString(statusStyle.Render("Tip: Add -o StrictHostKeyChecking=accept-new to avoid host key prompts on trycloudflare domains.") + "\n\n")
+		} else {
+			content.WriteString(fmt.Sprintf("To forward TCP traffic on port %d from a remote client, run:\n", m.port))
+			content.WriteString(commandStyle.Render(fmt.Sprintf("cloudflared access tcp --hostname %s --url 127.0.0.1:%d", strings.TrimPrefix(m.tunnelURL, "https://"), m.port)) + "\n\n")
+		}
 		content.WriteString(statusStyle.Render("Install cloudflared on the connecting client:") + "\n")
 		content.WriteString(statusStyle.Render("macOS: ") + commandStyle.Render("brew install cloudflared") + "\n")
 		content.WriteString(statusStyle.Render("Windows: ") + commandStyle.Render("winget install --id Cloudflare.cloudflared") + "\n")
