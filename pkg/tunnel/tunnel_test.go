@@ -175,6 +175,7 @@ func TestGetCloudflaredPath(t *testing.T) {
 	// 1. Custom path that exists
 	tempDir := t.TempDir()
 	customPath := filepath.Join(tempDir, "custom-cloudflared")
+	// #nosec G306
 	if err := os.WriteFile(customPath, []byte("#!/bin/sh\n"), 0755); err != nil {
 		t.Fatalf("Failed to create custom binary: %v", err)
 	}
@@ -248,7 +249,7 @@ func TestExtractTgzBinary(t *testing.T) {
 	_ = tw.Close()
 	_ = gw.Close()
 
-	if err := os.WriteFile(tgzPath, buf.Bytes(), 0644); err != nil {
+	if err := os.WriteFile(tgzPath, buf.Bytes(), 0600); err != nil {
 		t.Fatalf("Failed writing tgz file: %v", err)
 	}
 
@@ -257,6 +258,7 @@ func TestExtractTgzBinary(t *testing.T) {
 		t.Fatalf("extractTgzBinary failed: %v", err)
 	}
 
+	// #nosec G304
 	extracted, err := os.ReadFile(destPath)
 	if err != nil || string(extracted) != string(content) {
 		t.Errorf("Extracted content = %q, err = %v, want %q", string(extracted), err, string(content))
@@ -278,7 +280,7 @@ func TestExtractTgzBinary(t *testing.T) {
 	_ = gw2.Close()
 
 	tgzPath2 := filepath.Join(tempDir, "invalid.tgz")
-	_ = os.WriteFile(tgzPath2, buf2.Bytes(), 0644)
+	_ = os.WriteFile(tgzPath2, buf2.Bytes(), 0600)
 	err = extractTgzBinary(tgzPath2, destPath)
 	if err == nil {
 		t.Errorf("extractTgzBinary on archive without cloudflared returned nil error, want error")

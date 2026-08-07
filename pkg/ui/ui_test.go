@@ -149,7 +149,7 @@ func TestModelUpdates(t *testing.T) {
 
 	// Test portCheckMsg
 	mPort := NewModel(8080, "")
-	updatedModel, cmd = mPort.Update(portCheckMsg{listening: false})
+	updatedModel, _ = mPort.Update(portCheckMsg{listening: false})
 	m2 := updatedModel.(Model)
 	if !m2.portWarning || m2.status != statusCheckingCloudflared {
 		t.Errorf("portCheckMsg update failed: warning=%v status=%v", m2.portWarning, m2.status)

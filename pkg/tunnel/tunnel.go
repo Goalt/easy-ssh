@@ -294,11 +294,11 @@ type Update struct {
 
 // RunTunnel executes cloudflared in a subprocess, parsing its logs for the trycloudflare URL.
 func RunTunnel(ctx context.Context, binPath string, port int, ch chan<- Update) {
-	// #nosec G204
 	protocol := "tcp"
 	if port == 22 {
 		protocol = "ssh"
 	}
+	// #nosec G204
 	cmd := exec.CommandContext(ctx, binPath, "tunnel", "--url", fmt.Sprintf("%s://127.0.0.1:%d", protocol, port))
 
 	pr, pw := io.Pipe()
