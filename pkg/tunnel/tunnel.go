@@ -299,9 +299,19 @@ func RunTunnel(ctx context.Context, binPath string, port int, domain string, ch 
 		protocol = "ssh"
 	}
 
-	args := []string{"tunnel", "--url", fmt.Sprintf("%s://127.0.0.1:%d", protocol, port)}
+	var args []string
 	if domain != "" {
-		args = append(args, "--hostname", domain)
+		tunnelName := "easy-ssh-" + strings.ReplaceAll(domain, ".", "-")
+
+		createCmd := exec.CommandContext(ctx, binPath, "tunnel", "create", tunnelName)
+		_ = createCmd.Run()
+
+		routeCmd := exec.CommandContext(ctx, binPath, "tunnel", "route", "dns", tunnelName, domain)
+		_ = routeCmd.Run()
+
+		args = []string{"tunnel", "run", "--url", fmt.Sprintf("%s://127.0.0.1:%d", protocol, port), tunnelName}
+	} else {
+		args = []string{"tunnel", "--url", fmt.Sprintf("%s://127.0.0.1:%d", protocol, port)}
 	}
 
 	// #nosec G204
