@@ -47,6 +47,7 @@ type Model struct {
 	status             sessionStatus
 	port               int
 	customPath         string
+	domain             string
 	portWarning        bool
 	cloudflaredPath    string
 	downloadProgress   float64
@@ -64,7 +65,7 @@ type Model struct {
 }
 
 // NewModel creates a new easy-ssh UI model.
-func NewModel(port int, customPath string) Model {
+func NewModel(port int, customPath string, domain string) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(primaryColor)
@@ -77,6 +78,7 @@ func NewModel(port int, customPath string) Model {
 		status:             statusCheckingPort,
 		port:               port,
 		customPath:         customPath,
+		domain:             domain,
 		spinner:            s,
 		progressBar:        prog,
 		ctx:                ctx,
@@ -136,7 +138,7 @@ func (m Model) listenToDownload() tea.Cmd {
 // startTunnelCmd starts the cloudflared tunnel subprocess.
 func (m Model) startTunnelCmd() tea.Cmd {
 	return func() tea.Msg {
-		go tunnel.RunTunnel(m.ctx, m.cloudflaredPath, m.port, m.chTunnelUpdate)
+		go tunnel.RunTunnel(m.ctx, m.cloudflaredPath, m.port, m.domain, m.chTunnelUpdate)
 		return m.listenToTunnel()()
 	}
 }
@@ -187,7 +189,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.downloadCloudflaredCmd())
 		} else {
 			m.cloudflaredPath = msg.path
-			m.status = statusStartingTunnel
+			if m.domain != "" {
+				m.tunnelURL = "https://" + m.domain
+				m.status = statusTunnelRunning
+			} else {
+				m.status = statusStartingTunnel
+			}
 			cmds = append(cmds, m.startTunnelCmd())
 		}
 
@@ -198,7 +205,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.status = statusError
 			} else {
 				m.cloudflaredPath = msg.path
-				m.status = statusStartingTunnel
+				if m.domain != "" {
+					m.tunnelURL = "https://" + m.domain
+					m.status = statusTunnelRunning
+				} else {
+					m.status = statusStartingTunnel
+				}
 				cmds = append(cmds, m.startTunnelCmd())
 			}
 		} else {
@@ -226,7 +238,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 		} else {
-			if msg.URL != "" {
+			if msg.URL != "" && m.domain == "" {
 				m.tunnelURL = msg.URL
 				m.status = statusTunnelRunning
 			}

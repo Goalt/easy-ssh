@@ -3,8 +3,8 @@ package cmd
 
 import (
 	"fmt"
-	"net/http"
 	"github.com/spf13/cobra"
+	"net/http"
 )
 
 var (
@@ -18,7 +18,7 @@ var serveCmd = &cobra.Command{
 	Long:  `Start a simple HTTP server to serve static files from a directory on a specified port.`,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		fs := http.FileServer(http.Dir(serveDir))
-		
+
 		// Set up a basic logger middleware for requests
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("[%s] %s %s\n", r.Method, r.RemoteAddr, r.URL.Path)
