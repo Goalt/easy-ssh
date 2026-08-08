@@ -13,6 +13,7 @@ import (
 var (
 	port         int
 	customCFPath string
+	domain       string
 )
 
 var rootCmd = &cobra.Command{
@@ -23,7 +24,7 @@ like SSH. It checks if a service is listening on the target port, automatically 
 and runs cloudflared if needed, and presents a beautiful, modern terminal interface.`,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		// Create and run the Bubble Tea program
-		m := ui.NewModel(port, customCFPath)
+		m := ui.NewModel(port, customCFPath, domain)
 		p := tea.NewProgram(m)
 		if _, err := p.Run(); err != nil {
 			return fmt.Errorf("failed to run UI: %w", err)
@@ -43,4 +44,5 @@ func Execute() {
 func init() {
 	rootCmd.Flags().IntVarP(&port, "port", "p", 22, "Port number to tunnel")
 	rootCmd.Flags().StringVarP(&customCFPath, "cloudflared-path", "c", "", "Path to custom cloudflared binary (optional)")
+	rootCmd.Flags().StringVarP(&domain, "domain", "d", "", "Custom domain to use for the tunnel (requires authenticated cloudflared)")
 }

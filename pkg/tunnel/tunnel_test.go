@@ -292,7 +292,7 @@ func TestRunTunnelInvalidBinary(t *testing.T) {
 	defer cancel()
 
 	ch := make(chan Update, 10)
-	RunTunnel(ctx, "/path/to/nonexistent/binary", 8080, ch)
+	RunTunnel(ctx, "/path/to/nonexistent/binary", 8080, "", ch)
 
 	var lastUpdate Update
 	for u := range ch {
@@ -307,3 +307,22 @@ func TestRunTunnelInvalidBinary(t *testing.T) {
 	}
 }
 
+func TestRunTunnelInvalidBinaryWithDomain(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	ch := make(chan Update, 10)
+	RunTunnel(ctx, "/path/to/nonexistent/binary", 8080, "example.com", ch)
+
+	var lastUpdate Update
+	for u := range ch {
+		lastUpdate = u
+		if u.Done {
+			break
+		}
+	}
+
+	if lastUpdate.Err == nil {
+		t.Errorf("RunTunnel with invalid binary and domain returned no error")
+	}
+}

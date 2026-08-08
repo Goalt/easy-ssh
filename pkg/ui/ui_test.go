@@ -17,7 +17,7 @@ func stripANSI(str string) string {
 
 func TestModelTunnelRunningView(t *testing.T) {
 	t.Run("Port 22 (SSH)", func(t *testing.T) {
-		m := NewModel(22, "")
+		m := NewModel(22, "", "")
 		m.status = statusTunnelRunning
 		m.tunnelURL = "https://test-tunnel.trycloudflare.com"
 
@@ -31,7 +31,7 @@ func TestModelTunnelRunningView(t *testing.T) {
 	})
 
 	t.Run("Port 8080 (TCP)", func(t *testing.T) {
-		m := NewModel(8080, "")
+		m := NewModel(8080, "", "")
 		m.status = statusTunnelRunning
 		m.tunnelURL = "https://test-tunnel.trycloudflare.com"
 
@@ -102,7 +102,7 @@ func TestModelTunnelRunningView(t *testing.T) {
 }
 
 func TestModelAllViews(t *testing.T) {
-	m := NewModel(22, "/custom/path")
+	m := NewModel(22, "/custom/path", "")
 
 	// 1. statusCheckingPort
 	m.status = statusCheckingPort
@@ -146,27 +146,27 @@ func TestModelAllViews(t *testing.T) {
 
 func TestModelUpdates(t *testing.T) {
 	// Test Init
-	mInit := NewModel(8080, "")
+	mInit := NewModel(8080, "", "")
 	if cmd := mInit.Init(); cmd == nil {
 		t.Errorf("Init() returned nil cmd")
 	}
 
 	// Test Key Msg 'q' -> quit
-	mKey := NewModel(8080, "")
+	mKey := NewModel(8080, "", "")
 	_, cmd := mKey.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
 	if cmd == nil {
 		t.Errorf("Key 'q' did not return quit cmd")
 	}
 
 	// Test WindowSizeMsg
-	mWin := NewModel(8080, "")
+	mWin := NewModel(8080, "", "")
 	updatedModel, _ := mWin.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	if updatedModel.(Model).width != 100 || updatedModel.(Model).height != 40 {
 		t.Errorf("WindowSizeMsg did not set dimensions correctly")
 	}
 
 	// Test portCheckMsg
-	mPort := NewModel(8080, "")
+	mPort := NewModel(8080, "", "")
 	updatedModel, _ = mPort.Update(portCheckMsg{listening: false})
 	m2 := updatedModel.(Model)
 	if !m2.portWarning || m2.status != statusCheckingCloudflared {
@@ -195,3 +195,22 @@ func TestModelUpdates(t *testing.T) {
 	}
 }
 
+func TestModelUpdatesWithDomain(t *testing.T) {
+	// Test cloudflaredCheckMsg success with domain
+	m := NewModel(8080, "", "custom.domain.com")
+	m.status = statusCheckingCloudflared
+	updatedModel, _ := m.Update(cloudflaredCheckMsg{path: "/usr/local/bin/cloudflared"})
+	m3 := updatedModel.(Model)
+	if m3.cloudflaredPath != "/usr/local/bin/cloudflared" || m3.status != statusTunnelRunning || m3.tunnelURL != "https://custom.domain.com" {
+		t.Errorf("cloudflaredCheckMsg update with domain failed: path=%s status=%v url=%s", m3.cloudflaredPath, m3.status, m3.tunnelURL)
+	}
+
+	// Test progressUpdate done with domain
+	mProg := NewModel(8080, "", "custom.domain.com")
+	mProg.status = statusDownloading
+	updatedModelProg, _ := mProg.Update(progressUpdate{done: true, path: "/path/to/cf"})
+	mProg2 := updatedModelProg.(Model)
+	if mProg2.cloudflaredPath != "/path/to/cf" || mProg2.status != statusTunnelRunning || mProg2.tunnelURL != "https://custom.domain.com" {
+		t.Errorf("progressUpdate with domain failed: path=%s status=%v url=%s", mProg2.cloudflaredPath, mProg2.status, mProg2.tunnelURL)
+	}
+}
